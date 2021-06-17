@@ -1,0 +1,5 @@
+python .\normalize_buyhistory.py -bh .\buyhistory-combined.xlsx -nh .\buyhistory-normalized.xlsx -fx .\cad-usd.xlsx
+
+python .\normalize_tradehistory.py -th .\trade-history.xlsm -nh .\trade-history-normalized.xlsx
+
+python .\generate_statement.py -bh .\buyhistory-normalized.xlsx -th .\trade-history-normalized.xlsx -r asset-rates.xlsx -st statement.xlsx
