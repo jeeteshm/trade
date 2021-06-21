@@ -14,12 +14,14 @@ def main():
     parser.add_argument("-th", "--tradehistory", type=str, help="The input xlsx file containing your Binance trade history", required=False, default="trade-history-normalized.xlsx");
     parser.add_argument("-r", "--rates", type=str, help="The input xlsx file containing your Binance trade history", required=False, default="asset-rates.xlsx");
     parser.add_argument("-st", "--statement", type=str, help="The output xlsx file containing your gains and losses and asset lots", required=False, default="statement.xlsx");
+    parser.add_argument("-ul", "--unsoldlots", type=str, help="The output xlsx file containing your unsold asset lots", required=False, default="unsoldlots.xlsx");
     parser.add_argument("-v", "--verbose", help="Whether to output verbose output messages", required=False, default=False);
     args = parser.parse_args();
     print("Input Buy History file: ", args.buyhistory);
     print("Input Trade History file: ", args.tradehistory);
     print("Input Asset Rates file: ", args.rates);
     print("Output Gain-Loss statement file: ", args.statement);
+    print("Output Unsold Lots file: ", args.unsoldlots);
     print("Verbosity of log messages: ", args.verbose);
 
     buyHistoryDfs = pd.read_excel(args.buyhistory, sheet_name="Sheet1")
@@ -34,7 +36,7 @@ def main():
 
     #historyDfs.to_excel("debug.xlsx")
 
-    outputDfs = pd.DataFrame({
+    outputFormat = {
         'dateTime': pd.Series([], dtype='str'),
         'asset': pd.Series([], dtype='str'),
         'type': pd.Series([], dtype='str'),
@@ -62,7 +64,9 @@ def main():
         'boughtInLots': pd.Series([], dtype='str'),
         'buyingDates': pd.Series([], dtype='str'),
         'lotGains': pd.Series([], dtype='str'),
-    })
+    };
+
+    statementDfs = pd.DataFrame(outputFormat);
 
     rates = {};
     scratchPad = {};
@@ -143,7 +147,8 @@ def main():
                     oldestLotIndex = runningLots[asset][0];
                     oldestLot = scratchPad[oldestLotIndex];
 
-                    if(oldestLot['unsoldAmount'] < wantToSell):
+                    if(oldestLot['unsoldAmount'] < wantToSell
+                        or math.isclose(wantToSell, oldestLot['unsoldAmount'])):
                         del runningLots[asset][0]
                         selling = oldestLot['unsoldAmount'];
                         oldestLot['soldAmount'] += selling
@@ -206,9 +211,9 @@ def main():
             };
         else:
             raise Exception("Invalid row: " + row);
-    
+
     for key, txn in scratchPad.items():
-        outputDfs = outputDfs.append({
+        statementDfs = statementDfs.append({
             'dateTime': txn['dateTime'],
             'asset': txn['asset'],
             'type': txn['type'],
@@ -232,7 +237,68 @@ def main():
             'realizedGainPercent': txn['realizedGainPercent'],
         }, ignore_index=True);
 
+    lotsDfs = pd.DataFrame(outputFormat);
+    portfolioAdjustedCostBasis = 0.0
+    portfolioUnrealizedGain = 0.0
+    portfolioUnrealizedGainPercent = 0.0
+    for asset, keys in runningLots.items():
+        #print(asset);
+        sheetName = asset;
+        totalUnsoldAmount = 0.0;
+        adjustedCostBasis = 0.0;
+        totalUnrealizedGain = 0.0;
+        totalUnrealizedGainPercent = 0.0;
+        for key in keys:
+            txn = scratchPad[key];
+            totalUnsoldAmount += txn['unsoldAmount']
+            adjustedCostBasis += txn['unsoldAmount'] * txn['txnPricePerUnit']
+            totalUnrealizedGain += txn['unrealizedGain']
+            #print(scratchPad[key]);
+            lotsDfs = lotsDfs.append({
+                'dateTime': txn['dateTime'],
+                'asset': txn['asset'],
+                'type': txn['type'],
+                'amount': txn['amount'],
+                'txnPricePerUnit': txn['txnPricePerUnit'],
+                'currentPricePerUnit': txn['currentPricePerUnit'],
+                'totalCost': txn['totalCost'],
+
+                'unsoldAmount': txn['unsoldAmount'],
+                'soldAmount': txn['soldAmount'],
+                'unrealizedGain': txn['unrealizedGain'],
+                'unrealizedGainPercent': txn['unrealizedGainPercent'],
+                'soldInLots': str(txn['soldInLots']),
+                'sellingDates': str(txn['sellingDates']),
+
+                'boughtInLots': str(txn['boughtInLots']),
+                'buyingDates': str(txn['buyingDates']),
+                'interestLot': txn['interestLot'],
+                'lotGains': str(txn['lotGains']),
+                'realizedGain': txn['realizedGain'],
+                'realizedGainPercent': txn['realizedGainPercent'],
+            }, ignore_index=True);
+        totalUnrealizedGainPercent = 0.0 if math.isclose(adjustedCostBasis, 0.0) else totalUnrealizedGain / adjustedCostBasis * 100;
+        portfolioAdjustedCostBasis += adjustedCostBasis;
+        portfolioUnrealizedGain += totalUnrealizedGain
+        lotsDfs = lotsDfs.append({
+            'asset': txn['asset'],
+            'currentPricePerUnit': txn['currentPricePerUnit'],
+            'adjustedCostBasis': float(adjustedCostBasis),
+
+            'unsoldAmount': totalUnsoldAmount,
+            'unrealizedGain': totalUnrealizedGain,
+            'unrealizedGainPercent': totalUnrealizedGainPercent,
+        }, ignore_index=True);
+    portfolioUnrealizedGainPercent = 0.0 if math.isclose(portfolioAdjustedCostBasis, 0.0) else portfolioUnrealizedGain / portfolioAdjustedCostBasis * 100
+    lotsDfs = lotsDfs.append({
+        'asset': '*',
+        'adjustedCostBasis': float(portfolioAdjustedCostBasis),
+        'unrealizedGain': portfolioUnrealizedGain,
+        'unrealizedGainPercent': portfolioUnrealizedGainPercent,
+    }, ignore_index=True);
+
+    lotsDfs.to_excel(args.unsoldlots, 'sheet1');
     #print(outputDfs);
-    outputDfs.to_excel(args.statement)
+    statementDfs.to_excel(args.statement, "sheet1")
 
 main();
