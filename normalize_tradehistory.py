@@ -11,7 +11,7 @@ from datetime import timedelta;
 __author__ = "Jeetesh Mangwani"
 
 def main():
-    parser = argparse.ArgumentParser(description="This script outputs realized & unrealized gains and losses, assest lots and adjusted cost basis");
+    parser = argparse.ArgumentParser(description="This script normalizes the Binance trade history to a simpler format for other scripts to process");
     parser.add_argument("-th", "--tradehistory", type=str, help="The input xlsx file cotaining your Binance trade history", required=False, default = './trade-history.xlsx');
     parser.add_argument("-nh", "--normalizedhistory", type=str, help="The output xlsx file cotaining your normalized trade history", required=False, default = './trade-history-normalized.xlsx');
     parser.add_argument("-v", "--verbose", help="Whether to output verbose output messages", required=False, default=False);
