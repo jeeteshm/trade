@@ -2,4 +2,8 @@ python .\normalize_buyhistory.py -bh .\buyhistory-combined.xlsx -nh .\buyhistory
 
 python .\normalize_tradehistory.py -th .\trade-history.xlsm -nh .\trade-history-normalized.xlsx
 
-python .\generate_statement.py -bh .\buyhistory-normalized.xlsx -th .\trade-history-normalized.xlsx -r asset-rates.xlsx -st statement.xlsx -ul unsoldlots.xlsx
+python .\generate_exchange_statement.py -bh .\buyhistory-normalized.xlsx -th .\trade-history-normalized.xlsx -r asset-rates.xlsx -st exchange_statement.xlsx -ul exchange_unsoldlots.xlsx
+
+python .\generate_wallet_statement.py -wh .\wallethistory-normalized.xlsx -r asset-rates.xlsx -st wallet_statement.xlsx -ul wallet_unsoldlots.xlsx
+
+python .\normalize_wallettransactions.py -wt .\WalletTransactions.xlsx -it .\WalletInternalTransactions.xlsx -bt .\WalletBEP20Transactions.xlsx -wa 0xmywalletaddress -nh wallethistory-normalized.xlsx
