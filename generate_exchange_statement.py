@@ -12,6 +12,7 @@ def main():
     parser = argparse.ArgumentParser(description="This script outputs realized & unrealized gains and losses, assest lots and adjusted cost basis");
     parser.add_argument("-bh", "--buyhistory", type=str, help="The input xlsx file cotaining your Binance buy history", required=False, default="buyhistory-normalized.xlsx");
     parser.add_argument("-th", "--tradehistory", type=str, help="The input xlsx file containing your Binance trade history", required=False, default="trade-history-normalized.xlsx");
+    parser.add_argument("-mh", "--mischistory", type=str, help="The input xlsx file containing your Binance history from wallet withdrawals and conversions. It has to be in normalized format.", required=False, default="misc-history-normalized.xlsx");
     parser.add_argument("-r", "--rates", type=str, help="The input xlsx file containing your Binance trade history", required=False, default="asset-rates.xlsx");
     parser.add_argument("-st", "--statement", type=str, help="The output xlsx file containing your gains and losses and asset lots", required=False, default="statement.xlsx");
     parser.add_argument("-ul", "--unsoldlots", type=str, help="The output xlsx file containing your unsold asset lots", required=False, default="unsoldlots.xlsx");
@@ -19,6 +20,7 @@ def main():
     args = parser.parse_args();
     print("Input Buy History file: ", args.buyhistory);
     print("Input Trade History file: ", args.tradehistory);
+    print("Input Miscellaneous History file: ", args.mischistory);
     print("Input Asset Rates file: ", args.rates);
     print("Output Gain-Loss statement file: ", args.statement);
     print("Output Unsold Lots file: ", args.unsoldlots);
@@ -26,10 +28,12 @@ def main():
 
     buyHistoryDfs = pd.read_excel(args.buyhistory, sheet_name="Sheet1")
     tradeHistoryDfs = pd.read_excel(args.tradehistory, sheet_name="Sheet1")
+    miscHistoryDfs = pd.read_excel(args.mischistory, sheet_name="Sheet1")
     ratesDfs = pd.read_excel(args.rates, sheet_name="Sheet1")
     # print(buyHistoryDfs);
     # print(tradeHistoryDfs);
     historyDfs = tradeHistoryDfs.append(buyHistoryDfs);
+    historyDfs = historyDfs.append(miscHistoryDfs);
     historyDfs = historyDfs.sort_values(by=['dateTime']);
     historyDfs = historyDfs.set_index(i for i in range(len(historyDfs.index)));
     #print(historyDfs);
